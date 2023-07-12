@@ -1,0 +1,137 @@
+name: etcher
+base: core20
+version: '0.1'
+summary: Flash OS images to SD cards & USB drives, safely and easily. # 79 char long summary
+description: |
+  Etcher is a powerful OS image flasher built with web technologies to ensure
+  flashing an SDCard or USB drive is a pleasant and safe experience. It protects
+  you from accidentally writing to your hard-drives, ensures every byte of data
+  was written correctly, and much more. It can also directly flash Raspberry Pi devices that support [USB device boot mode](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#usb-device-boot-mode).
+
+grade: stable # must be 'stable' to release into candidate/stable channels
+confinement: strict
+
+apps:
+  etcher:
+    command: etcher/balena-etcher
+    plugs: &_plugs
+      - home
+      - opengl
+      - wayland
+      - browser-support
+      - hardware-observe
+      - network
+      - network-bind
+      - process-control
+    environment: &_environment
+      XDG_DATA_HOME: $SNAP_USER_DATA
+      XDG_DATA_DIRS: $SNAP/usr/share
+      GTK_USE_PORTAL: 0
+      GDK_GL: gles
+
+# This is one of four snippets that relate to providing the userspace graphics needed by your application.
+# You can treat this as "magic" so long as you don't need to make changes.
+# On the Mir discourse forum there's a lot more detail on [the graphics-core20 Snap interface](https://discourse.ubuntu.com/t/the-graphics-core20-snap-interface/23000) and it's use.
+plugs:
+  graphics-core20:
+    interface: content
+    target: $SNAP/graphics
+    default-provider: mesa-core20
+
+environment:
+  # This is one of four snippets that relate to providing the userspace graphics needed by your application.
+  LD_LIBRARY_PATH:    $SNAP/graphics/lib
+  LIBGL_DRIVERS_PATH: $SNAP/graphics/dri
+  LIBVA_DRIVERS_PATH: $SNAP/graphics/dri
+  __EGL_VENDOR_LIBRARY_DIRS: $SNAP/graphics/glvnd/egl_vendor.d
+  # Other, generally useful environment settings...
+  # XDG config
+  XDG_CACHE_HOME:  $SNAP_USER_COMMON/.cache
+  XDG_CONFIG_HOME: $SNAP_USER_DATA/.config
+  XDG_CONFIG_DIRS: $SNAP/etc/xdg
+  # XKB config
+  XKB_CONFIG_ROOT: $SNAP/usr/share/X11/xkb
+
+# The `layout` ensures that files can be found by applications where they are expected by the toolkit or application.
+layout:
+  # This is one of four snippets that relate to providing the userspace graphics needed by your application.
+  # These paths (/usr/share/libdrm and /usr/share/drirc.d) are hardcoded in mesa.
+  /usr/share/libdrm:  # Needed by mesa-core20 on AMD GPUs
+    bind: $SNAP/graphics/libdrm
+  /usr/share/drirc.d:  # Used by mesa-core20 for app specific workarounds
+    bind: $SNAP/graphics/drirc.d
+  # Other, generally useful paths
+  /usr/share/fonts:
+    bind: $SNAP/usr/share/fonts
+  /usr/share/icons:
+    bind: $SNAP/usr/share/icons
+  /usr/share/sounds:
+    bind: $SNAP/usr/share/sounds
+  /etc/fonts:
+    bind: $SNAP/etc/fonts
+  # GTK
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gdk-pixbuf-2.0:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/gdk-pixbuf-2.0
+  /usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/gtk-3.0:
+    bind: $SNAP/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/gtk-3.0
+  /usr/share/mime:
+    bind: $SNAP/usr/share/mime
+  /etc/gtk-3.0:
+    bind: $SNAP/etc/gtk-3.0
+
+parts:
+  etcher:
+    source: https://github.com/balena-io/etcher.git
+    plugin: python
+    build-environment:
+      - PATH: "$PATH:$SNAPCRAFT_PART_BUILD/node_modules/.bin"
+    override-build: |
+      set +u # core20 base does not allow unbound variables !
+
+      # workaround for build.snapcraft.io builds
+      # https://bugs.launchpad.net/bugs/1886861
+      if [ -n "$http_proxy" ]; then
+        export ELECTRON_GET_USE_PROXY=1
+        export GLOBAL_AGENT_HTTP_PROXY="${http_proxy}"
+        export GLOBAL_AGENT_HTTPS_PROXY="${http_proxy}"
+      fi
+      
+      git submodule update --init --recursive
+      npm ci
+      npm install --unsafe-perm true electron-packager
+      npm run build
+      ./node_modules/electron-packager/bin/electron-packager.js . --overwrite --platform=linux --output=release-build --prune=true
+      cp -a ./balena-etcher-linux-* $SNAPCRAFT_PART_INSTALL/etcher
+      chmod a+rx $SNAPCRAFT_PART_INSTALL/etcher
+    build-packages:
+      - libudev-dev
+      - jq
+      - libstdc++6
+    stage-packages:
+      - libnss3
+      - libx11-6                                               
+      - libxcomposite1                                        
+      - libxdamage1                                           
+      - libxext6                                              
+      - libxfixes3                                            
+      - libxrandr2                                            
+      - libasound2                                            
+      - libatk1.0-0                                           
+      - libatk-bridge2.0-0                                    
+      - libatspi2.0-0                                             
+      - libcairo2                                             
+      - libcups2                                              
+      - libffi7                                               
+      - libgtk-3-0                                             
+      - libpango1.0-0                                         
+      - libxkbcommon-x11-0
+      - libcolord2
+      - libdconf1
+    build-snaps:
+      - node/18/stable
+      - g++
+
+architectures:
+  - build-on: amd64
+  - build-on: armhf
+  - build-on: arm64
