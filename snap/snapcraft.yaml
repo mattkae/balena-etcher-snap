@@ -9,7 +9,7 @@ description: |
   was written correctly, and much more. It can also directly flash Raspberry Pi devices that support [USB device boot mode](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#usb-device-boot-mode).
 
 grade: devel # must be 'stable' to release into candidate/stable channels
-confinement: strict
+confinement: classic
 
 apps:
   etcher:
@@ -88,7 +88,7 @@ parts:
     override-build: |
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
       export NVM_DIR="$HOME/.nvm"
-      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" || true  # This loads nvm
       nvm install 20
       nvm use 20
 
@@ -134,6 +134,9 @@ parts:
       - libxkbcommon-x11-0
       - libcolord2
       - libdconf1
+      - libdrm2
+      - libgbm1
+      - libwayland-server0
     build-snaps:
       - node/20/stable
 
