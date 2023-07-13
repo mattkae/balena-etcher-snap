@@ -82,7 +82,7 @@ layout:
 parts:
   etcher:
     source: https://github.com/balena-io/etcher.git
-    plugin: python
+    plugin: nil
     build-environment:
       - PATH: "$PATH:$SNAPCRAFT_PART_BUILD/node_modules/.bin"
     override-build: |
@@ -128,7 +128,7 @@ parts:
       - libcolord2
       - libdconf1
     build-snaps:
-      - node/18/stable
+      - node/20/stable
       - g++
 
 architectures:
