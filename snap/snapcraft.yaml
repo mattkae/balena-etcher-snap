@@ -8,7 +8,7 @@ description: |
   you from accidentally writing to your hard-drives, ensures every byte of data
   was written correctly, and much more. It can also directly flash Raspberry Pi devices that support [USB device boot mode](https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#usb-device-boot-mode).
 
-grade: stable # must be 'stable' to release into candidate/stable channels
+grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: strict
 
 apps:
@@ -86,6 +86,12 @@ parts:
     build-environment:
       - PATH: "$PATH:$SNAPCRAFT_PART_BUILD/node_modules/.bin"
     override-build: |
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+      nvm install 20
+      nvm use 20
+
       set +u # core20 base does not allow unbound variables !
 
       # workaround for build.snapcraft.io builds
@@ -107,6 +113,7 @@ parts:
       - libudev-dev
       - jq
       - libstdc++6
+      - curl
     stage-packages:
       - libnss3
       - libx11-6                                               
@@ -129,7 +136,6 @@ parts:
       - libdconf1
     build-snaps:
       - node/20/stable
-      - g++
 
 architectures:
   - build-on: amd64
